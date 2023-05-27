@@ -6,3 +6,6 @@ Participants:
 - Cecily Bartsch
 - Miguel Diaz
 - Elizabeth Joseph
+
+[Notes](https://www.overleaf.com/read/jfmznkythkwm)
+
