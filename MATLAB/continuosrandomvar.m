@@ -3,9 +3,9 @@ clc
 clf
 %% Uniform Variable
 
-mew_normal = 1;  
-b_uniform = 3;    
-x_uniform = mew_normal:b_uniform;
+a_uniform = 2;  
+b_uniform = 4;    
+x_uniform = a_uniform:b_uniform;
 y_uniform = unifpdf(x_uniform); %pdf of 1 through 5 in the continuous uniform distribution on the interval [2,4].
 % Plot the Uniform distribution
 figure(1)
