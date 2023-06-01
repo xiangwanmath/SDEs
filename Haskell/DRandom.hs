@@ -12,13 +12,16 @@ module DRandom ( DRandom,
     dFromIntegral,
     sample,
     sampleMean,
-    sampleVariance
+    sampleVariance,
+    histogram,
+    plot'
   ) where
 
 import System.Random hiding (uniform, sample, random)
 import Control.Monad
 import Data.List (unfoldr)
 import Class
+import Data.Text.Chart
 
 -- Define the monad DRandom.
 
@@ -116,3 +119,15 @@ sampleVariance n gen dist =
       mean = sum samples / fromIntegral n
       variance = sum (map (\x -> (x - mean) ^ 2) samples) / fromIntegral (n - 1)
   in variance
+
+-- (a, b) : interval
+-- h : step length
+-- xs : input list
+histogram :: (Ord a, Num a, Enum a) => (a, a) -> a -> [a] -> [Int]
+histogram (a, b) n xs = map count partitions
+  where
+    count histogram = length $ filter (\x -> x >= histogram && x < histogram + n) xs
+    partitions = [a, a + n .. b - n]
+
+plot' :: Integral a => [a] -> IO ()
+plot' h = plot (map (toInteger) h)

@@ -200,16 +200,19 @@ The `DRandom` module represents probability distributions via random sampling; i
 
 | Requires       |                            |
 |----------------|----------------------------|
-| `random`  | `cabal install --lib random`|
+| `random`       | `cabal install --lib random`|
+| `asciichart`   | `cabal install --lib asciichart`|
 
 ## Functions
 
 The `DRandom` instance defines all the probability distributions in `Distribution` class, as well as the following:
 
-- `dFromIntegral :: DRandom Int -> DRandom Double`: Which converts a `DRandom Int` to a `DRandom Double`. Useful for type wrangling, including calls to sampleMean and sampleVariance.
+- `dFromIntegral :: DRandom Int -> DRandom Double`: Converts a `DRandom Int` to a `DRandom Double`. Useful for type wrangling, including calls to `sampleMean` and `sampleVariance`.
 - `sample :: StdGen -> DRandom a -> [a]`: Generates an infinite list of samples from a given distribution, using the random number generator of your choice.
 - `sampleMean :: Int -> StdGen -> DRandom Double -> Double`: Calculates the mean of a given distribution with sample size `n`, using the random number generator of your choice.
 - `sampleVariance :: Int -> StdGen -> DRandom Double -> Double`: Calculates the variance of a given distribution with sample size `n`, using the random number generator of your choice.
+- `histogram :: (Ord a, Num a, Enum a) => (a, a) -> a -> [a] -> [Int]`: Partitions a given interval into subintervals of the provided length, then counts the number of values from a given list (presumably samples from a distribution) which fall into each subinterval.
+- `plot' :: Integral a => [a] -> IO ()`: Plots a list; to be used with `histogram`.
 
 ## Examples
 
@@ -242,6 +245,29 @@ main = do
 ```console
 ghci> main
 Samples: [0,0,0,2,0]
+```
+
+Example plot: 
+```console
+ghci> g <- newStdGen
+ghci> samples = take 10000 (sample g (normal 0 1))
+ghci> h = histogram (-3, 3) 0.05 samples
+ghci> plot' h
+0.21 ┤                                                        ╭╮   ╭─╮
+0.20 ┤                                                      ╭─╯│╭──╯ │╭╮╭╮
+0.18 ┤                                             ╭╮╭─╮ ╭──╯  ╰╯    ╰╯╰╯│╭╮ ╭╮
+0.17 ┤                                             │╰╯ ╰─╯               ╰╯╰╮││╭╮
+0.15 ┤                                           ╭─╯                        ╰╯╰╯│╭╮
+0.14 ┤                                        ╭╮ │                              ││╰╮ ╭╮
+0.12 ┤                                      ╭─╯╰─╯                              ╰╯ │╭╯│
+0.11 ┤                                    ╭─╯                                      ╰╯ ╰─╮
+0.94 ┤                              ╭╮╭───╯                                             ╰─╮
+0.79 ┤                              │╰╯                                                   ╰──╮╭╮
+0.63 ┤                           ╭──╯                                                        ╰╯╰╮╭╮
+0.48 ┤                        ╭──╯                                                              ╰╯╰─╮
+0.32 ┤                ╭───────╯                                                                     ╰─────╮
+0.17 ┤      ╭╮╭───────╯                                                                                   ╰───────╮ ╭─╮╭╮
+0.02 ┼──────╯╰╯                                                                                                   ╰─╯ ╰╯╰────
 ```
 
 # RandomWalk
