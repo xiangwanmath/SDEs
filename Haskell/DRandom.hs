@@ -9,128 +9,110 @@ module DRandom ( DRandom,
     exponential,
     gamma,
     normal,
+    dFromIntegral,
     sample,
     sampleMean,
     sampleVariance
   ) where
 
--- TODO
--- eventually better to replace with built-in Data.Random distributions
-
 import System.Random hiding (uniform, sample, random)
+import Control.Monad
+import Data.List (unfoldr)
 import Class
 
 -- Define the monad DRandom.
 
-newtype DRandom a = DRandom { run :: StdGen -> (a, StdGen) }
+newtype DRandom a = DRandom { run :: StdGen -> a }
 
 instance Functor DRandom where
   fmap f (DRandom action) = DRandom $ \gen ->
-    let (x, gen') = action gen
-    in (f x, gen')
+    let x = action gen
+    in f x
 
 instance Applicative DRandom where
-  pure x = DRandom $ \gen -> (x, gen)
+  pure x = DRandom $ \gen -> x
   (DRandom f) <*> (DRandom x) = DRandom $ \gen ->
-    let (f', gen') = f gen
-        (x', gen'') = x gen'
-    in (f' x', gen'')
+    let f' = f gen
+        x' = x gen
+    in f' x'
 
 instance Monad DRandom where
   return = pure
   (DRandom x) >>= f = DRandom $ \gen ->
-    let (x', gen') = x gen
+    let x' = x gen
         (DRandom y) = f x'
-    in y gen'
+    in y gen
+
+instance Num (DRandom Double) where
+  (+) = liftM2 (+)
+  (*) = liftM2 (*)
+  (-) = liftM2 (-)
+  abs = liftM abs
+  signum = liftM signum
+  fromInteger = pure . fromInteger
+
+instance Fractional (DRandom Double) where
+  (/) = liftM2 (/)
+  recip = liftM recip
+  fromRational = pure . fromRational
 
 -- Define DRandom as an instance of Distribution.
 
 instance Distribution DRandom where
 
   random :: DRandom Double
-  random = DRandom $ randomR (0.0, 1.0)
+  random = DRandom $ \gen -> fst (randomR (0.0, 1.0) gen)
 
   uniformDiscrete :: [a] -> DRandom a
   uniformDiscrete xs = DRandom $ \gen ->
     let (i, gen') = randomR (0, length xs - 1) gen
-    in (xs !! i, gen')
+    in xs !! i
 
   bernoulli :: Double -> DRandom Bool
   bernoulli p = DRandom $ \gen ->
-    let (x, gen') = randomR (0, 1) gen
-    in (x <= p, gen')
+    let x = run random gen
+    in x <= p
 
   binomial :: Int -> Double -> DRandom Int
-  binomial n p = DRandom $ \gen -> binom n p gen 0 0
-    where
-      binom n p gen count successes
-        | count == n = (successes, gen)
-        | otherwise =
-            let (x, gen') = randomR (0, 1) gen
-                successes' = if x <= p then successes + 1 else successes
-            in binom n p gen' (count + 1) successes'
+  binomial n p = DRandom $ \gen ->
+    let tosses = take n (sample gen random)
+    in (length (filter (<= p) tosses))
 
   geometric :: Double -> DRandom Int
-  geometric p = DRandom $ \gen -> geom p gen 0
-    where
-      geom p gen count
-        | x <= p = (count, gen')
-        | otherwise = geom p gen' (count + 1)
-        where
-          (x, gen') = randomR (0, 1) gen
-
-  poisson :: Double -> DRandom Int
-  poisson lambda = DRandom $ \gen -> pois lambda gen 0 1.0
-    where
-      pois lambda gen count prod
-        | prod < (exp (-lambda)) = (count, gen')
-        | otherwise = pois lambda gen' (count + 1) (prod * u)
-        where
-          (u, gen') = randomR (0, 1) gen
+  geometric p = do
+    u <- random
+    return (ceiling (log (1 - u) / log (1 - p)))
 
   uniform :: Double -> Double -> DRandom Double
-  uniform a b = DRandom $ \gen ->
-    let (x, gen') = randomR (a, b) gen
-    in (x, gen')
+  uniform a b = do
+    u <- random
+    return (a + (b - a) * u)
 
   exponential :: Double -> DRandom Double
-  exponential lambda = DRandom $ \gen ->
-    let (x, gen') = randomR (0.0, 1.0) gen
-        val = -log x / lambda
-    in (val, gen')
-
-  gamma :: Double -> Double -> DRandom Double
-  gamma alpha beta = DRandom $ \gen ->
-    let (x, gen') = randomR (0.0, 1.0) gen
-        val = -log x / alpha ** (1 / beta)
-    in (val, gen')
+  exponential lambda = do
+    u <- random
+    return (- log (1 - u) / lambda)
 
   normal :: Double -> Double -> DRandom Double
-  normal mean stdDev = DRandom $ \gen ->
-    let (x, gen') = randomR (0.0, 1.0) gen
-        val = mean + stdDev * (sqrt (-2.0 * log x) * cos (2.0 * pi * x))
-    in (val, gen')
-
+  normal mu sigma = DRandom $ \gen ->
+    let (u1, gen') = (run random gen, snd (split gen))
+        u2 = run random gen'
+    in (mu + sigma * sqrt (-2.0 * log u1) * cos (2.0 * pi * u2))
 
 -- UTILITIES --
 
-sample :: DRandom a -> Int -> IO [a]
-sample d n = do
-  gen <- newStdGen
-  let samples = take n $ map fst $ iterate (run d . snd) (run d gen)
-  return samples
+dFromIntegral :: DRandom Int -> DRandom Double
+dFromIntegral d = fmap fromIntegral d
 
-sampleMean :: DRandom Double -> Int -> IO Double
-sampleMean d n = do
-  samples <- sample d n
-  let total = sum samples
-      mean = total / fromIntegral n
-  return mean
+sample :: StdGen -> DRandom a -> [a]
+sample gen d = unfoldr (\g -> Just (run d g, snd (split g))) gen
 
-sampleVariance :: DRandom Double -> Int -> IO Double
-sampleVariance d n = do
-  mean <- sampleMean d n
-  samples <- sample d n
-  let sigmas = map (\x -> (x - mean) ^ 2) samples
-      variance = sum sigmas / fromIntegral (n - 1)
-  return variance
+sampleMean :: Int -> StdGen -> DRandom Double -> Double
+sampleMean n gen dist = sum (take n (sample gen dist)) / fromIntegral n
+
+sampleVariance :: Int -> StdGen -> DRandom Double -> Double
+sampleVariance n gen dist =
+  let samples = take n (sample gen dist)
+      mean = sum samples / fromIntegral n
+      variance = sum (map (\x -> (x - mean) ^ 2) samples) / fromIntegral (n - 1)
+  in variance

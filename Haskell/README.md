@@ -150,7 +150,7 @@ The `DCont` module provides a representation of probability distributions as wei
 The `DCont` instance defines all the probability distributions in `Distribution` class, as well as the following:
 
 - `probability :: Prob a -> (a -> Bool) -> Double`: Calculates the probability of a given event (`Prob = DCont Double`).
-- `variance :: Prob Double -> Double`: Calculates the expectation of a given distribution. 
+- `expectation :: Prob Double -> Double`: Calculates the expectation of a given distribution. 
 - `variance :: Prob Double -> Double`: Calculates the variance of a given distribution. 
 - `momentGeneratingFunction :: Prob Double -> Double -> Double`: Defines the moment generating function for a given distribution.
 
@@ -206,19 +206,20 @@ The `DRandom` module represents probability distributions via random sampling; i
 
 The `DRandom` instance defines all the probability distributions in `Distribution` class, as well as the following:
 
-- `sample :: DRandom a -> Int -> IO [a]`: Randomly samples `n` values from a given distribution. 
-- `sampleMean :: DRandom Double -> Int -> IO Double`: Calculates the mean of a given distribution with sample size `n`.
-- `sampleVariance :: DRandom Double -> Int -> IO Double`: Calculates the variance of a given distribution with sample size `n`.
+- `dFromIntegral :: DRandom Int -> DRandom Double`: Which converts a `DRandom Int` to a `DRandom Double`. Useful for type wrangling, including calls to sampleMean and sampleVariance.
+- `sample :: StdGen -> DRandom a -> [a]`: Generates an infinite list of samples from a given distribution, using the random number generator of your choice.
+- `sampleMean :: Int -> StdGen -> DRandom Double -> Double`: Calculates the mean of a given distribution with sample size `n`, using the random number generator of your choice.
+- `sampleVariance :: Int -> StdGen -> DRandom Double -> Double`: Calculates the variance of a given distribution with sample size `n`, using the random number generator of your choice.
 
 ## Examples
 
 Calculating sample mean and variance: 
 ```console
--- Calculate the sample mean and variance of a gamma distribution with alpha = 5.0 and beta = 1.0 from 100 samples.
-ghci> sampleMean (gamma 5.0 1.0) 100
-0.216808524220492
-ghci> sampleVariance (gamma 5.0 1.0) 100
-6.124929119824983e-2
+ghci> g <- newStdGen
+ghci> sampleMean 1000 g (exponential 0.25)
+4.0092517850703695
+ghci> sampleVariance 1000 g (dFromIntegral (binomial 20 0.5))
+5.11398998998999
 ```
 
 Example probabilistic program:  
@@ -234,7 +235,8 @@ randEven = (geometric 0.5) >>= \x ->
 -- Take a sample of five
 main :: IO ()
 main = do
-  samples <- sample randEven 5
+  g <- newStdGen
+  samples <- take 5 (sample g randEven)
   putStrLn $ "Samples: " ++ show samples
 ```
 ```console

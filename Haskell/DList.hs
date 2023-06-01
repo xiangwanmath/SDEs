@@ -55,7 +55,7 @@ instance Monad DList where
 instance Distribution DList where
 
   random :: DList Double
-  random = D [(x, P 1.0) | x <- [0..1]]
+  random = uniform 0 1
 
   uniformDiscrete :: [a] -> DList a
   uniformDiscrete xs = D [(x, P (1 / fromIntegral (length xs))) | x <- xs]
