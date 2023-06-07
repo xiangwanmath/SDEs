@@ -371,7 +371,7 @@ Modified from `Data.Text.Chart`, this module provides a simple interface for plo
 
 ## Functions
 
-- `plot :: [Double] -> IO ()`: Takes a list of `Double` values and prints out a corresponding chart. Uses the default `Options`: terminal `height` 14, `minY` and `maxY` are the minimum and maximum values of the input list, and `style` is "line".
+- `plot :: [Double] -> IO ()`: Takes a list of `Double` values and prints out a corresponding chart. Uses the default `Options`: terminal `height` 14, `minY` and `maxY` are the minimum and maximum values of the input list, "line" `style`, and color is default terminal settings.
 
 - `plotWith :: Options -> [Double] -> IO ()`: Same as `plot`, but allows customizing the chart options. The `Options` are described below.
 
@@ -379,9 +379,19 @@ Modified from `Data.Text.Chart`, this module provides a simple interface for plo
 
 The `Options` type provides a way to customize the appearance of the chart. It has the following fields:
 
-- `height :: Double`: Allows setting the height of the chart.
+- `height :: Double`: Height of the chart.
 
 - `style :: String`: Style of the plot. Can be either "line" or "points".
+
+- `color  :: Maybe String`: Color of the plot. One of,
+    - "black"
+    - "red"
+    - "green"
+    - "yellow"
+    - "blue"
+    - "magenta"
+    - "cyan"
+    - "white"
 
 > **Note:** A few issues with the following: Use `Just` notation (see last example), will wrap values by default later. For now just to get an idea of scale, don't try to set min or max values within the range of your list (ie cut off some values).
 
