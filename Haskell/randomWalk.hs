@@ -60,4 +60,5 @@ plotavg :: Int -> Int -> IO ()
 plotavg n k = do
     g <- newStdGen
     let paths = evalRand (sequence (replicate k (oneD n))) g
+    -- modify axes as desired
     plot (average paths)

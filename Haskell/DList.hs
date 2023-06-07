@@ -26,7 +26,6 @@ import Data.List (sort,groupBy,foldl')
 import Data.Map (fromListWith, toList)
 import Data.Function (on)
 import Control.Monad
-import Data.Text.Chart
 
 import Class
 import Chart
