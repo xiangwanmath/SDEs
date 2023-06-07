@@ -22,6 +22,7 @@ You need to define an instance of the `Distribution` class for your desired mona
 ```haskell
 import Control.Monad.State
 import System.Random
+import Class
 
 -- Define an instance of the `Distribution` class for the `State StdGen` monad, which allows us to 
 -- generate random values using the `randomR` function from the `System.Random` module.
@@ -70,7 +71,6 @@ It also provides the following:
 - `probability :: DList a -> Event a -> Probability`: Calculates the probability of a given `Event a = a -> Bool`
 - `expectation :: DList Double -> Double`: Calculates the expectation of a given distribution. 
 - `variance :: DList Double -> Double`: Calculates the variance of a given distribution. 
-- `plot' :: DList a -> IO ()`: Roughly plots a curve of a given distribution
 
 
 ## Examples
@@ -93,6 +93,7 @@ P 0.62964826390267
 
 Example probabilistic program:  
 ```haskell
+import Class
 import DList
 
 main :: IO ()
@@ -173,6 +174,7 @@ ghci> probability (do {x <- (uniform 0 1); y <- (uniform 0 1); return (x*y)}) (<
 
 Example probabilistic program:  
 ```haskell
+import Class
 import DCont
 
 main :: IO ()
@@ -202,17 +204,19 @@ The `DRandom` module represents probability distributions via random sampling; i
 |----------------|----------------------------|
 | `random`       | `cabal install --lib random`|
 | `asciichart`   | `cabal install --lib asciichart`|
+| `hmatrix`   | `cabal install --lib hmatrix`|
 
 ## Functions
 
 The `DRandom` instance defines all the probability distributions in `Distribution` class, as well as the following:
 
+- `multivariateNormal :: [Double] -> Matrix Double -> DRandom [Double]`: Draws a vector random numbers from a normal distribution with the given mean vector and covariance matrix. 
 - `dFromIntegral :: DRandom Int -> DRandom Double`: Converts a `DRandom Int` to a `DRandom Double`. Useful for type wrangling, including calls to `sampleMean` and `sampleVariance`.
+- `dFromBool :: DRandom Bool -> DRandom Double`: Converts a `DRandom Bool` to a `DRandom Double`. Useful for type wrangling, including calls to `sampleMean` and `sampleVariance`.
 - `sample :: StdGen -> DRandom a -> [a]`: Generates an infinite list of samples from a given distribution, using the random number generator of your choice.
 - `sampleMean :: Int -> StdGen -> DRandom Double -> Double`: Calculates the mean of a given distribution with sample size `n`, using the random number generator of your choice.
 - `sampleVariance :: Int -> StdGen -> DRandom Double -> Double`: Calculates the variance of a given distribution with sample size `n`, using the random number generator of your choice.
 - `histogram :: (Ord a, Num a, Enum a) => (a, a) -> a -> [a] -> [Int]`: Partitions a given interval into subintervals of the provided length, then counts the number of values from a given list (presumably samples from a distribution) which fall into each subinterval.
-- `plot' :: Integral a => [a] -> IO ()`: Plots a list; to be used with `histogram`.
 
 ## Examples
 
@@ -227,6 +231,7 @@ ghci> sampleVariance 1000 g (dFromIntegral (binomial 20 0.5))
 
 Example probabilistic program:  
 ```haskell
+import Class
 import DRandom
 
 -- Generate a random positive even number from a geometric distribution
@@ -253,15 +258,15 @@ ghci> g <- newStdGen
 ghci> samples = take 10000 (sample g (normal 0 1))
 ghci> h = histogram (-3, 3) 0.05 samples
 ghci> plot' h
-0.21 ┤                                                        ╭╮   ╭─╮
-0.20 ┤                                                      ╭─╯│╭──╯ │╭╮╭╮
-0.18 ┤                                             ╭╮╭─╮ ╭──╯  ╰╯    ╰╯╰╯│╭╮ ╭╮
-0.17 ┤                                             │╰╯ ╰─╯               ╰╯╰╮││╭╮
-0.15 ┤                                           ╭─╯                        ╰╯╰╯│╭╮
-0.14 ┤                                        ╭╮ │                              ││╰╮ ╭╮
-0.12 ┤                                      ╭─╯╰─╯                              ╰╯ │╭╯│
-0.11 ┤                                    ╭─╯                                      ╰╯ ╰─╮
-0.94 ┤                              ╭╮╭───╯                                             ╰─╮
+0.41 ┤                                                        ╭╮   ╭─╮
+0.40 ┤                                                      ╭─╯│╭──╯ │╭╮╭╮
+0.38 ┤                                             ╭╮╭─╮ ╭──╯  ╰╯    ╰╯╰╯│╭╮ ╭╮
+0.37 ┤                                             │╰╯ ╰─╯               ╰╯╰╮││╭╮
+0.35 ┤                                           ╭─╯                        ╰╯╰╯│╭╮
+0.34 ┤                                        ╭╮ │                              ││╰╮ ╭╮
+0.32 ┤                                      ╭─╯╰─╯                              ╰╯ │╭╯│
+0.31 ┤                                    ╭─╯                                      ╰╯ ╰─╮
+0.24 ┤                              ╭╮╭───╯                                             ╰─╮
 0.79 ┤                              │╰╯                                                   ╰──╮╭╮
 0.63 ┤                           ╭──╯                                                        ╰╯╰╮╭╮
 0.48 ┤                        ╭──╯                                                              ╰╯╰─╮
@@ -285,7 +290,7 @@ The `RandomWalk` module simulates various random walks.
 
 - `oneD :: RandomGen g => Int -> Rand g [Int]`: Simulates a one-dimensional random walk  of length `n` by generating a list of steps.
 
-- `twoD :: RandomGen g => Int -> Rand g [(Int, Int)]`: Simulates a two-dimensional random walk  of length `n`by generating a list of (x, y) coordinates.
+- `twoD :: RandomGen g => Int -> Rand g [(Int, Int)]`: Simulates a two-dimensional random walk  of length `n` by generating a list of (x, y) coordinates.
 
 ### Continuous Random Walks
 
@@ -294,8 +299,6 @@ The `RandomWalk` module simulates various random walks.
 - `twoDC :: RandomGen g => Int -> Rand g [(Double, Double)]`: Simulates a two-dimensional continuous random walk  of length `n` by generating a list of (x, y) coordinates.
 
 ### Graphing
-
-- `plot' :: Int -> IO ()`: Plots a one-dimensional simple random walk of length `n`.
 
 - `plotavg :: Int -> Int -> IO ()`: Plots the average of `k` random walk paths of length `n`.
 
@@ -351,6 +354,117 @@ ghci> plotavg 100 100000
 -6.43 ┤                                                                                                 ││
 -7.00 ┤                                                                                                 ╰╯
 
+```
+
+# Chart Module
+
+Modified from `Data.Text.Chart`, this module provides a simple interface for plotting to the terminal. 
+
+## Functions
+
+- `plot :: [Double] -> IO ()`: Takes a list of `Double` values and prints out a corresponding chart. Uses the default `Options`: terminal `height` 14, `minY` and `maxY` are the minimum and maximum values of the input list, and `style` is "line".
+
+- `plotWith :: Options -> [Double] -> IO ()`: Same as `plot`, but allows customizing the chart options. The `Options` are described below.
+
+## Options
+
+The `Options` type provides a way to customize the appearance of the chart. It has the following fields:
+
+- `height :: Double`: Allows setting the height of the chart.
+
+- `style :: String`: Style of the plot. Can be either "line" or "points".
+
+> **Note:** A few issues with the following: Use `Just` notation (see last example), will wrap values by default later. For now just to get an idea of scale, don't try to set min or max values within the range of your list (ie cut off some values).
+
+- `minY :: Maybe Double`: Minimum Y value.
+
+- `maxY :: Maybe Double`: Maximum Y value.
+
+## Examples
+
+```console
+ghci> wave = sin . (/ 120) . (pi *) . (4 *) <$> [0..60]
+ghci> plot wave
+ 1.00 ┤           ╭──────╮
+ 0.86 ┤        ╭──╯      ╰──╮
+ 0.71 ┤      ╭─╯            ╰─╮
+ 0.57 ┤     ╭╯                ╰╮
+ 0.43 ┤   ╭─╯                  ╰─╮
+ 0.29 ┤  ╭╯                      ╰╮
+ 0.14 ┤╭─╯                        ╰─╮
+ 0.00 ┼╯                            ╰╮                            ╭
+-0.14 ┤                              ╰─╮                        ╭─╯
+-0.29 ┤                                ╰╮                      ╭╯
+-0.43 ┤                                 ╰─╮                  ╭─╯
+-0.57 ┤                                   ╰╮                ╭╯
+-0.71 ┤                                    ╰─╮            ╭─╯
+-0.86 ┤                                      ╰──╮      ╭──╯
+-1.00 ┤                                         ╰──────╯
+
+```
+
+```console
+ghci> :load randomWalk.hs 
+[1 of 2] Compiling Chart            ( Chart.hs, interpreted )
+[2 of 2] Compiling RandomWalk       ( randomWalk.hs, interpreted )
+Ok, two modules loaded.
+ghci> g <- newStdGen
+ghci> path = map fromIntegral $ evalRand (oneD 100) g
+ghci> plotWith options {style = "points"} path
+ 9.00 ┤                                                                                        *
+ 8.00 ┤                                                                                       * *
+ 7.00 ┤                                                                                      *   *
+ 6.00 ┤                                                                                     *     *       *
+ 5.00 ┤                                                                                    *       * *   * *
+ 4.00 ┼                                     *                       * *                   *         * * *
+ 3.00 ┤                      * *     *     * * *               *   * * *           *     *             *
+ 2.00 ┤ *               * * * * * * * *   *   * * *         * * * *     * *     * * * * *
+ 1.00 ┼* *             * * *     * *   * *       * *       * *   *       * * * * *   * *
+ 0.00 ┤   *           *                 *           * * * *                 * *
+-1.00 ┤    *         *                               * * *
+-2.00 ┤     *       *
+-3.00 ┤      *   * *
+-4.00 ┤       * * *
+-5.00 ┤        *
+```
+
+```haskell
+import Class
+import DRandom
+import Chart
+
+main :: IO ()
+main = do 
+  g <- newStdGen
+  let coin = bernoulli 0.7
+      dist = do
+        x <- coin
+        normal (if x then (-3) else 3) 1
+      samples = take 1000 $ sample g dist 
+      hist = histogram (-7, 7) 0.2 samples
+  plotWith options { maxY = Just 1 } hist
+```
+```console
+ghci> main
+1.00 ┼
+0.94 ┤
+0.90 ┤
+0.85 ┤
+0.81 ┤             ╭╮
+0.77 ┤             │╰╮       ╭╮                       ╭╮╭╮
+0.72 ┤             │ │       ││                       │╰╯│
+0.68 ┤             │ │       │╰╮                      │  │
+0.64 ┤            ╭╯ │╭╮     │ │                      │  │
+0.59 ┤            │  ╰╯│    ╭╯ ╰╮                   ╭╮│  ╰╮
+0.55 ┤            │    │╭╮╭╮│   ╰╮                  │╰╯   │
+0.41 ┤            │    ││││╰╯    │                  │     │
+0.36 ┤           ╭╯    ╰╯╰╯      │                  │     │
+0.32 ┤           │               ╰─╮               ╭╯     ╰╮
+0.27 ┤         ╭─╯                 ╰╮              │       │
+0.23 ┤        ╭╯                    │              │       │
+0.19 ┤        │                     │              │       │
+0.14 ┤     ╭──╯                     ╰───╮         ╭╯       │
+0.00 ┼─────╯                            ╰─────────╯        ╰───────────────
 ```
 
 # Benchmarks.hs

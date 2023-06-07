@@ -1,14 +1,13 @@
-module RandomWalk (
+module RandomWalk ( liftA2',
     oneD,
     twoD,
     oneDC,
     twoDC,
-    plot',
     plotavg
   ) where
 
+import Chart
 import Control.Monad.Random
-import Data.Text.Chart
 import Data.List (transpose)
 
 liftA2' :: Applicative f => (a -> b -> c) -> f a -> f b -> f c
@@ -57,17 +56,8 @@ average lists = map av (transpose lists)
   where
     av xs = fromIntegral (sum xs) / fromIntegral (length xs)
 
-plot' :: Int -> IO ()
-plot' n = do
-    g <- newStdGen
-    let path = map (toInteger) (evalRand (oneD n) g)
-    --print path
-    plot path
-
 plotavg :: Int -> Int -> IO ()
 plotavg n k = do
     g <- newStdGen
     let paths = evalRand (sequence (replicate k (oneD n))) g
-    --print (average paths)
-    let vals = map (\x -> round (x*100)) (average paths)
-    plot vals
+    plot (average paths)

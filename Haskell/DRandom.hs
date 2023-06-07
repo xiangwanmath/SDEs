@@ -9,19 +9,21 @@ module DRandom ( DRandom,
     exponential,
     gamma,
     normal,
+    multivariateNormal,
     dFromIntegral,
+    dFromBool,
     sample,
     sampleMean,
     sampleVariance,
     histogram,
-    plot'
   ) where
 
 import System.Random hiding (uniform, sample, random)
 import Control.Monad
 import Data.List (unfoldr)
 import Class
-import Data.Text.Chart
+import Chart
+import Numeric.LinearAlgebra
 
 -- Define the monad DRandom.
 
@@ -102,10 +104,20 @@ instance Distribution DRandom where
         u2 = run random gen'
     in (mu + sigma * sqrt (-2.0 * log u1) * cos (2.0 * pi * u2))
 
+multivariateNormal :: [Double] -> Matrix Double -> DRandom [Double]
+multivariateNormal mu c = DRandom $ \gen ->
+  let cholesky = chol (trustSym c)
+      xs = take (length mu) $ sample gen (normal 0 1)
+      ys = cholesky #> fromList xs
+  in (zipWith (+) mu (toList ys))
+
 -- UTILITIES --
 
 dFromIntegral :: DRandom Int -> DRandom Double
 dFromIntegral d = fmap fromIntegral d
+
+dFromBool :: DRandom Bool -> DRandom Double
+dFromBool d = fmap (\x -> if x == True then 1.0 else 0.0) d
 
 sample :: StdGen -> DRandom a -> [a]
 sample gen d = unfoldr (\g -> Just (run d g, snd (split g))) gen
@@ -123,11 +135,10 @@ sampleVariance n gen dist =
 -- (a, b) : interval
 -- h : step length
 -- xs : input list
-histogram :: (Ord a, Num a, Enum a) => (a, a) -> a -> [a] -> [Int]
-histogram (a, b) n xs = map count partitions
+histogram :: (Ord a, Fractional a, Enum a) => (a, a) -> a -> [a] -> [Double]
+histogram (a, b) h xs = map normalize $ map count partitions
   where
-    count histogram = length $ filter (\x -> x >= histogram && x < histogram + n) xs
-    partitions = [a, a + n .. b - n]
-
-plot' :: Integral a => [a] -> IO ()
-plot' h = plot (map (toInteger) h)
+    count histogram = fromIntegral $ length $ filter (\x -> x >= histogram && x < histogram + h) xs
+    total = fromIntegral (length partitions)
+    normalize count = count / total
+    partitions = [a, a + h .. b - h]

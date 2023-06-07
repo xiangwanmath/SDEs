@@ -17,7 +17,6 @@ module DList ( DList,
     oneD,
     twoD,
     randomWalk,
-    plot',
   ) where
 
 -- Representation of a Distribution as a list where each outcome is tagged with its probability.
@@ -30,6 +29,7 @@ import Control.Monad
 import Data.Text.Chart
 
 import Class
+import Chart
 
 -- Define the monad DList.
 
@@ -146,7 +146,7 @@ twoD (x, y) =
 -- the next timestep (`reduce`ing along the way). 
 -- n : length of random walk
 -- step : step function
--- init : initial state of
+-- init : initial state
 randomWalk :: Eq a => Int -> (a -> DList a) -> DList a -> DList a
 randomWalk n step init = foldl' (reduce') init (replicate n step)
   where reduce' acc f = reduce (acc >>= f)
@@ -159,12 +159,4 @@ reduce (D d) = D $ map combine $ groupBy ((==) `on` fst) d
   where
     combine xs@((state, _):_) = (state, addP xs)
     addP = P . sum . map ((\(P p) -> p) . snd)
-
--- GRAPHING --
-
--- Graphs extremely rough approximations of a given distribution curve.
-plot' :: DList a -> IO ()
-plot' d = plot vals 
-  where
-    vals = map (\x -> round (x*100)) (map (snd) (toList' d))
 
