@@ -13,7 +13,7 @@ function randomNumbers = polarMarsaglia(n)
         s = sum(u.^2);
         
         % Step 3: Check if the squared sum is within the acceptable range (0, 1)
-        if s < 1 && s > 0
+        if s < 1 
             % Step 4: Apply Box-Muller transformation to generate two random numbers
             z = u * sqrt(-2 * log(s) / s);  % Standard normal random variables
             randomNumbers(i) = (z(1) + 1) / 2;    % Store the generated random variable
