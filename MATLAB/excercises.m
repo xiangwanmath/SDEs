@@ -245,42 +245,7 @@ disp('Probabilities for individuals initially living in district E:');
 disp(['Residence in E: ' num2str(probE)]);
 disp(['Residence in W: ' num2str(probW)]);
 
-%%1.6.7
-
-%% %Parameters
-N_values = 10:100:1E+4; % Values of N
-T = 100; % Total time interval
-dt = 0.01; % Time step
-
-% Generate random numbers for N=1E+4
-X = randn(1, 1E+4);
-
-% Calculate sample path for N=100
-t = 0:dt:(T-dt);
-S_100 = cumsum(X) .* sqrt(dt);
-
-% Plot sample path for N=100
-figure;
-plot(t, S_100);
-%hold on;
-
-% Generate and plot sample paths for increasing values of N
-for N = N_values
-    % Calculate sample path for current N
-    tn = linspace(0, T, N+1);
-    S_N = cumsum(X(1:N)) .* sqrt(diff(tn));
-    plot(tn(2:end), S_N);
-end
-
-% Set labels and title
-xlabel('t');
-ylabel('S_N(t)');
-title('Sample Path of S_N(t) for Increasing Values of N');
-legend('N= 10000');
-grid on;
-
-
-%% PC-Exercise 4.16 (PC-Exercise 1.8.6, p. 42).
+%% PC-Exercise 4.16 (PC-Exercise 1.8.2, p. 41).
 
 N_values = 10:100:1E+4; % Values of N
 T = 100; % Total time interval
@@ -301,7 +266,30 @@ title('Sample Path of S_N(t) for Increasing Values of N');
 legend('N= 1000');
 grid on;
 
+%%1.8.6
+% Parameters
+N_values = 500; % Values of N
+T = 1; % Total time interval
 
+X = randn(max(N_values), T);
+   
+    % Evaluate ratios for smaller values of h at t = 0.5
+    h_values = [0.1, 0.05, 0.01, 0.001];
+    ratios = zeros(size(h_values));
+    for j = 1:length(h_values)
+        h = h_values(j);
+        idx =  find(t >= 0.5, 1);
+        ratios(j) = (S_N(idx+1) - S_N(idx)) / h;
+    end
+   
+    % Plot ratios against h
+    figure(6);
+    plot(h_values, ratios, 'o-');
+    title(['Ratios for N = ' num2str(N)]);
+    xlabel('h');
+    ylabel('Ratios');
+    
+    
 %% 1.8.8
 N = 1E+4;
 T = 10;
