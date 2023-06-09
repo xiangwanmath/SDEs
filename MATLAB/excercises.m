@@ -209,6 +209,42 @@ grid on;
 
 
 %%1.6.5
+% Parameters
+a = 0.1; % Percentage of E inhabitants moving to W
+b = 0.01; % Percentage of W inhabitants moving to E
+lifespan = 100; % Lifespan in years
+simulations = 100; % Number of simulations
+
+
+transitionMatrix = [1 - a, a; b, 1 - b];
+residenceE = 0;
+residenceW = 0;
+
+% Simulate residence for individuals initially living in district E
+for i = 1:simulations
+    currentState = 1; % Start in district E
+    
+    for age = 1:lifespan
+        nextState = discreteRand([1, 2], transitionMatrix(currentState, :));
+        currentState = nextState;
+    end
+    
+    if currentState == 1
+        residenceE = residenceE + 1;
+    else
+        residenceW = residenceW + 1;
+    end
+end
+
+% Calculate probabilities of residence in districts E and W
+probE = residenceE / simulations;
+probW = residenceW / simulations;
+
+% Display results
+disp('Probabilities for individuals initially living in district E:');
+disp(['Residence in E: ' num2str(probE)]);
+disp(['Residence in W: ' num2str(probW)]);
+
 %%1.6.7
 
 %% %Parameters
