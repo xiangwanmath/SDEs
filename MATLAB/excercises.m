@@ -71,6 +71,28 @@ disp(['Sample Average: ', num2str(sampleAverage)]);
 disp(['Sample Variance: ', num2str(sampleVariance)]);
 
 %%1.4.6
+N = 1E+3;                     
+numSubintervals = 1E+2; 
+intervalLength = 5;
+subintervalLength = intervalLength/numSubintervals; 
+% 
+randomNumbers = polarMarsaglia(N);
+
+counts = histcounts(randomNumbers, numSubintervals);
+
+% 
+relativeFrequencies = counts;
+
+% 
+binEdges = [-Inf, linspace(-2.5, 2.5, numSubintervals), Inf];
+
+% Plot the histogram of the relative frequencies
+figure(1)
+histogram(relativeFrequencies,'binEdges',binEdges);
+xlabel('SubIntervals');
+ylabel('Relative Frequency');
+title('Histogram of  the frequency Uniform random Pseudo-Random Numbers Generated');
+
 
 %% (PC-Exercise 1.4.10, p. 118)
 lambda = 0.5;               % Parameter lambda for exponential distribution
@@ -87,9 +109,40 @@ for i = 1:length(valuesOfA)
     disp(['Average for a = ', num2str(a), ': ', num2str(average)]);
 end
 
-%%1.4.12
-%%1.4.13
+%%1.4.12 & 1.4.13
+n = 1000;          % Number of pairs of random numbers to generate
+hValues = [0.1, 1, 10];   % Values of h
 
+for i = 1:length(hValues)
+    h = hValues(i);
+    
+    % Generate Gaussian random numbers for X1 and X2
+    X1 = sqrt(h) * polarMarsaglia(n);
+    X2 = (h^(3/2) / sqrt(3)) * polarMarsaglia(n);
+    
+    % Calculate sample averages
+    sampleAverageX1 = mean(X1);
+    sampleAverageX2 = mean(X2);
+    
+    % Calculate sample covariances
+    sampleCovariance = cov(X1, X2);
+
+    %check independence
+    independence_check(i) = (mean(X1 .* X2) - mean(X1) * mean(X2) == 0) && (var(X1 + X2) == var(X1) + var(X2));
+
+    
+    % Display the results
+    disp(['For h = ', num2str(h)]);
+    %disp('Generated pairs of random numbers:');
+    %disp([X1 X2]);
+    disp(['Sample Average X1: ', num2str(sampleAverageX1)]);
+    disp(['Sample Average X2: ', num2str(sampleAverageX2)]);
+    disp('Sample Covariance:');
+    disp(sampleCovariance);
+    disp("Independence Check:");
+    disp(independence_check);
+    
+    
 %% PC-Exercise 4.8 (PC-Exercise 1.5.3, p. 24)
 
 n= 1E+7;
@@ -193,37 +246,45 @@ grid on;
 
 %% PC-Exercise 4.16 (PC-Exercise 1.8.6, p. 42).
 
+N_values = 10:100:1E+4; % Values of N
+T = 100; % Total time interval
+dt = T / N; % Time step
 
-% Parameters
-N_values = 500; % Values of N
-T = 1; % Total time interval
+X = randn(1, 1E+4);
 
-% Generate random numbers for N=100
-X = randn(max(N_values), T);
+% Calculate sample path for N=100
+t = 0:dt:(T-dt);
+S_100 = cumsum(X) .* sqrt(dt);
 
-% Calculate and plot random walks for increasing N
-for i = 1:length(N_values)
-    N = N_values(i);
-    t = linspace(0, T, N+1);
-    S_N = cumsum(X(1:N, :));
-   
-    % Evaluate ratios for smaller values of h at t = 0.5
-    h_values = [0.1, 0.05, 0.01, 0.001];
-    ratios = zeros(size(h_values));
-    for j = 1:length(h_values)
-        h = h_values(j);
-        idx = find(t >= 0.5, 1);
-        ratios(j) = (S_N(idx+1) - S_N(idx)) / h;
-    end
-   
-    % Plot ratios against h
-    figure(6);
-    plot(h_values, ratios, 'o-');
-    title(['Ratios for N = ' num2str(N)]);
-    xlabel('h');
-    ylabel('Ratios');
-end
+% Plot sample path for N=100
+figure;
+plot(t, S_100);
+xlabel('t');
+ylabel('S_N(t)');
+title('Sample Path of S_N(t) for Increasing Values of N');
+legend('N= 1000');
+grid on;
 
+
+%% 1.8.8
+N = 1E+4;
+T = 10;
+dt = T / N; % Time step
+
+% Generate random numbers for N
+X = randn(1, N);
+
+% Calculate sample path for N
+t = linspace(0, T, N);
+S_N = cumsum(X) .* sqrt(dt) - t .* (cumsum(X(end)) / T);
+
+% Plot sample path for N
+figure;
+plot([0, t, T], [0, S_N, 0]);
+xlabel('t');
+ylabel('B_{(0,0)}^{(1,0)}(t)');
+title('Approximation of Brownian Bridge B_{(0,0)}^{(1,0)} for N = 100');
+grid on;
 
 
 
