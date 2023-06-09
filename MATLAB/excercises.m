@@ -83,6 +83,30 @@ for i = 1:length(valuesOfA)
     disp(['Average for a = ', num2str(a), ': ', num2str(average)]);
 end
 
+%% PC-Exercise 4.8 (PC-Exercise 1.5.3, p. 24)
+
+n= 1E+7;
+ 
+%
+X = rand(n,1);
+
+%                                                                                                                                                                                                                                                      rating realizations of Z from N(0, 1/n)
+Z_n = randn(n,1) ./sqrt(n);  
+
+
+%compute Y_n
+Y_n = X + Z_n;
+
+    
+%plot
+histogram(Y_n, 'Normalization','pdf');
+xlabel('Y_n');
+ylabel('Density');
+title('Density function estimate of Y');
+
+
+
+
 
 
 
