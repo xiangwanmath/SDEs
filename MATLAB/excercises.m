@@ -267,27 +267,7 @@ legend('N= 1000');
 grid on;
 
 %%1.8.6
-% Parameters
-N_values = 500; % Values of N
-T = 1; % Total time interval
 
-X = randn(max(N_values), T);
-   
-    % Evaluate ratios for smaller values of h at t = 0.5
-    h_values = [0.1, 0.05, 0.01, 0.001];
-    ratios = zeros(size(h_values));
-    for j = 1:length(h_values)
-        h = h_values(j);
-        idx =  find(t >= 0.5, 1);
-        ratios(j) = (S_N(idx+1) - S_N(idx)) / h;
-    end
-   
-    % Plot ratios against h
-    figure(6);
-    plot(h_values, ratios, 'o-');
-    title(['Ratios for N = ' num2str(N)]);
-    xlabel('h');
-    ylabel('Ratios');
     
     
 %% 1.8.8
