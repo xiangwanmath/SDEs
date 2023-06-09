@@ -158,14 +158,13 @@ grid on;
 %%1.6.5
 %%1.6.7
 
-%% PC Exercise 4.15 (PC Exercise 1.8.2 , p.41)
-% Parameters
-N_values = 1E+4; % Values of N
+%% %Parameters
+N_values = 10:100:1E+4; % Values of N
 T = 100; % Total time interval
 dt = 0.01; % Time step
 
 % Generate random numbers for N=1E+4
-X = randn(1, N_values);
+X = randn(1, 1E+4);
 
 % Calculate sample path for N=100
 t = 0:dt:(T-dt);
@@ -188,8 +187,9 @@ end
 xlabel('t');
 ylabel('S_N(t)');
 title('Sample Path of S_N(t) for Increasing Values of N');
-legend('N= 1000');
+legend('N= 10000');
 grid on;
+
 
 %% PC-Exercise 4.16 (PC-Exercise 1.8.6, p. 42).
 
