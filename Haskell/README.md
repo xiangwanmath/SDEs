@@ -45,6 +45,98 @@ ghci> main
 Rolled: 5
 ```
 
+# DRandom Module
+
+The `DRandom` module represents probability distributions via random sampling; it encapsulates the randomness using the `StdGen` type from the `System.Random` library. 
+
+> **Note:** It will probably be better eventually to replace this with the built-in distributions from `Data.Random` or a similar library.
+
+| Requires       |                            |
+|----------------|----------------------------|
+| `random`       | `cabal install --lib random`|
+| `hmatrix`   | `cabal install --lib hmatrix`|
+
+## Functions
+
+The `DRandom` instance defines all the probability distributions in `Distribution` class, as well as the following distributions:
+
+- `multivariateNormal :: [Double] -> Matrix Double -> DRandom [Double]`: Draws a vector of random numbers from a normal distribution with the given mean vector and covariance matrix. 
+- `wiener :: Double -> Int -> DRandom [Double]`: Draws an approximate random path from a wiener process with a given end time and number of steps. 
+- `brownianBridge :: (Double, Double) -> (Double, Double) -> Int -> DRandom [Double]`: Draws an approximate random path from a brownian bridge from an inital point `(0, x1)` to an endpoint `(t, yt)` with the given number of steps. 
+
+It also defines the following utility functions:
+
+- `histogram :: (Ord a, Num a, Enum a) => (a, a) -> a -> [a] -> [Int]`: Partitions a given interval into subintervals of the provided length, then counts the number of values from a given list (presumably samples from a distribution) which fall into each subinterval.
+- `dFromIntegral :: DRandom Int -> DRandom Double`: Converts a `DRandom Int` to a `DRandom Double`. Useful for type wrangling, including calls to `sampleMean` and `sampleVariance`.
+- `dFromBool :: DRandom Bool -> DRandom Double`: Converts a `DRandom Bool` to a `DRandom Double`. Useful for type wrangling, including calls to `sampleMean` and `sampleVariance`.
+- `sample :: StdGen -> DRandom a -> [a]`: Generates an infinite list of samples from a given distribution, using the random number generator of your choice.
+- `sample' :: StdGen -> DRandom a -> a`: Shortcut for taking a single sample from a given distribution, using the random number generator of your choice.
+- `sampleMean :: Int -> StdGen -> DRandom Double -> Double`: Calculates the mean of a given distribution with sample size `n`, using the random number generator of your choice.
+- `sampleVariance :: Int -> StdGen -> DRandom Double -> Double`: Calculates the variance of a given distribution with sample size `n`, using the random number generator of your choice.
+- `sampleMeanVector :: [[Double]] -> [Double]`: Calculates the sample mean vector of a given multivariate distribution.
+- `averagePath :: Fractional a => [[a]] -> [a]`: Calculates the average list from a list of lists.
+- `reduce :: Num c => [c] -> [c]`: Reduces the number of steps in a path by half. Useful for comparing coarser approximations of the same sample path. 
+
+
+## Examples
+
+Calculating sample mean and variance: 
+```console
+ghci> g <- newStdGen
+ghci> sampleMean 1000 g (exponential 0.25)
+4.0092517850703695
+ghci> sampleVariance 1000 g (dFromIntegral (binomial 20 0.5))
+5.11398998998999
+```
+
+Example probabilistic program:  
+```haskell
+import Class
+import DRandom
+
+-- Generate a random positive even number from a geometric distribution
+randEven :: DRandom Int
+randEven = (geometric 0.5) >>= \x ->
+  let number = if even x then x else x + 1
+  in return number
+
+-- Take a sample of five
+main :: IO ()
+main = do
+  g <- newStdGen
+  samples <- take 5 (sample g randEven)
+  putStrLn $ "Samples: " ++ show samples
+```
+```console
+ghci> main
+Samples: [0,0,0,2,0]
+```
+
+Example plot: 
+```console
+ghci> g <- newStdGen
+ghci> samples = take 10000 (sample g (normal 0 1))
+ghci> h = histogram (-3, 3) 0.05 samples
+ghci> plot h
+1.95 ┼                                                       ╭╮
+1.81 ┤                                                       │╰╮   ╭╮
+1.67 ┤                                                    ╭─╮│ ╰──╮│╰╮   ╭╮
+1.53 ┤                                             ╭╮ ╭╮ ╭╯ ╰╯    ╰╯ │ ╭─╯│
+1.39 ┤                                            ╭╯│ │╰─╯           ╰─╯  ╰────╮
+1.25 ┤                                          ╭─╯ ╰─╯                        │ ╭╮
+1.11 ┤                                      ╭───╯                              ╰─╯╰╮
+0.98 ┤                                    ╭─╯                                      ╰────╮
+0.84 ┤                                   ╭╯                                             ╰─╮
+0.70 ┤                              ╭╮ ╭─╯                                                ╰─╮╭╮
+0.56 ┤                          ╭╮╭╮│╰─╯                                                    ╰╯│╭─╮╭╮
+0.42 ┤                     ╭╮ ╭─╯╰╯╰╯                                                         ╰╯ ╰╯│╭╮
+0.28 ┤                 ╭╮╭─╯╰─╯                                                                    ╰╯╰╮╭──╮
+0.14 ┤        ╭────────╯╰╯                                                                            ╰╯  ╰─────────╮╭╮
+0.00 ┼────────╯                                                                                                     ╰╯╰──────
+```
+
+Further example given by `/Examples/Linear.hs`
+
 # DList Module
 
 The `DList` module provides a monadic representation of probability distributions as a list of outcomes tagged with their probabilities, as an instance of the `Distribution` class.
@@ -193,87 +285,7 @@ ghci> main
 Expected sum: 7.0
 ```
 
-# DRandom Module
-
-The `DRandom` module represents probability distributions via random sampling; it encapsulates the randomness using the `StdGen` type from the `System.Random` library. 
-
-> **Note:** It will probably be better eventually to replace this with the built-in distributions from `Data.Random` or a similar library.
-
-| Requires       |                            |
-|----------------|----------------------------|
-| `random`       | `cabal install --lib random`|
-| `hmatrix`   | `cabal install --lib hmatrix`|
-
-## Functions
-
-The `DRandom` instance defines all the probability distributions in `Distribution` class, as well as the following:
-
-- `multivariateNormal :: [Double] -> Matrix Double -> DRandom [Double]`: Draws a vector random numbers from a normal distribution with the given mean vector and covariance matrix. 
-- `dFromIntegral :: DRandom Int -> DRandom Double`: Converts a `DRandom Int` to a `DRandom Double`. Useful for type wrangling, including calls to `sampleMean` and `sampleVariance`.
-- `dFromBool :: DRandom Bool -> DRandom Double`: Converts a `DRandom Bool` to a `DRandom Double`. Useful for type wrangling, including calls to `sampleMean` and `sampleVariance`.
-- `sample :: StdGen -> DRandom a -> [a]`: Generates an infinite list of samples from a given distribution, using the random number generator of your choice.
-- `sampleMean :: Int -> StdGen -> DRandom Double -> Double`: Calculates the mean of a given distribution with sample size `n`, using the random number generator of your choice.
-- `sampleVariance :: Int -> StdGen -> DRandom Double -> Double`: Calculates the variance of a given distribution with sample size `n`, using the random number generator of your choice.
-- `histogram :: (Ord a, Num a, Enum a) => (a, a) -> a -> [a] -> [Int]`: Partitions a given interval into subintervals of the provided length, then counts the number of values from a given list (presumably samples from a distribution) which fall into each subinterval.
-
-## Examples
-
-Calculating sample mean and variance: 
-```console
-ghci> g <- newStdGen
-ghci> sampleMean 1000 g (exponential 0.25)
-4.0092517850703695
-ghci> sampleVariance 1000 g (dFromIntegral (binomial 20 0.5))
-5.11398998998999
-```
-
-Example probabilistic program:  
-```haskell
-import Class
-import DRandom
-
--- Generate a random positive even number from a geometric distribution
-randEven :: DRandom Int
-randEven = (geometric 0.5) >>= \x ->
-  let number = if even x then x else x + 1
-  in return number
-
--- Take a sample of five
-main :: IO ()
-main = do
-  g <- newStdGen
-  samples <- take 5 (sample g randEven)
-  putStrLn $ "Samples: " ++ show samples
-```
-```console
-ghci> main
-Samples: [0,0,0,2,0]
-```
-
-Example plot: 
-```console
-ghci> g <- newStdGen
-ghci> samples = take 10000 (sample g (normal 0 1))
-ghci> h = histogram (-3, 3) 0.05 samples
-ghci> plot h
-1.95 ┼                                                       ╭╮
-1.81 ┤                                                       │╰╮   ╭╮
-1.67 ┤                                                    ╭─╮│ ╰──╮│╰╮   ╭╮
-1.53 ┤                                             ╭╮ ╭╮ ╭╯ ╰╯    ╰╯ │ ╭─╯│
-1.39 ┤                                            ╭╯│ │╰─╯           ╰─╯  ╰────╮
-1.25 ┤                                          ╭─╯ ╰─╯                        │ ╭╮
-1.11 ┤                                      ╭───╯                              ╰─╯╰╮
-0.98 ┤                                    ╭─╯                                      ╰────╮
-0.84 ┤                                   ╭╯                                             ╰─╮
-0.70 ┤                              ╭╮ ╭─╯                                                ╰─╮╭╮
-0.56 ┤                          ╭╮╭╮│╰─╯                                                    ╰╯│╭─╮╭╮
-0.42 ┤                     ╭╮ ╭─╯╰╯╰╯                                                         ╰╯ ╰╯│╭╮
-0.28 ┤                 ╭╮╭─╯╰─╯                                                                    ╰╯╰╮╭──╮
-0.14 ┤        ╭────────╯╰╯                                                                            ╰╯  ╰─────────╮╭╮
-0.00 ┼────────╯                                                                                                     ╰╯╰──────
-```
-
-# RandomWalk
+# Examples/RandomWalk
 
 | Requires       |                            |
 |----------------|----------------------------|

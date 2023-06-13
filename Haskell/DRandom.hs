@@ -10,20 +10,27 @@ module DRandom ( DRandom,
     gamma,
     normal,
     multivariateNormal,
+    wiener,
+    brownianBridge,
     dFromIntegral,
     dFromBool,
     sample,
+    sample',
     sampleMean,
+    sampleMeanVector,
     sampleVariance,
+    averagePath,
+    reduce,
     histogram,
   ) where
 
 import System.Random hiding (uniform, sample, random)
 import Control.Monad
-import Data.List (unfoldr)
+import Data.List (unfoldr, transpose)
+import Numeric.LinearAlgebra
+
 import Class
 import Chart
-import Numeric.LinearAlgebra
 
 -- Define the monad DRandom.
 
@@ -111,6 +118,19 @@ multivariateNormal mu c = DRandom $ \gen ->
       ys = cholesky #> fromList xs
   in (zipWith (+) mu (toList ys))
 
+wiener :: Double -> Int -> DRandom [Double]
+wiener n h = DRandom $ \gen ->
+  let dt = n / fromIntegral h
+      steps = map (* (sqrt dt)) $ take h $ (sample gen (normal 0 1))
+  in (scanl (+) 0 steps)
+
+brownianBridge :: (Double, Double) -> (Double, Double) -> Int -> DRandom [Double]
+brownianBridge (_, x1) (t, yt) h = do
+  wt <- wiener t h
+  let bridge = zipWith (\x i -> x1 + x - (i/t) * (last wt - yt + x1)) wt [0, dt..t]
+      dt = t / fromIntegral (h - 1)
+  return bridge
+
 -- UTILITIES --
 
 dFromIntegral :: DRandom Int -> DRandom Double
@@ -131,6 +151,29 @@ sampleVariance n gen dist =
       mean = sum samples / fromIntegral n
       variance = sum (map (\x -> (x - mean) ^ 2) samples) / fromIntegral (n - 1)
   in variance
+
+sampleMeanVector :: [[Double]] -> [Double]
+sampleMeanVector xs =
+  let n = fromIntegral $ length xs
+  in map (/ n) (foldl1 (zipWith (+)) xs)
+
+averagePath :: Fractional a => [[a]] -> [a]
+averagePath lists = map average' (transpose lists)
+  where
+    average' xs = sum xs / fromIntegral (length xs)
+
+-- shortcut for taking one sample
+sample' :: StdGen -> DRandom a -> a
+sample' g dist = head $ take 1 $ sample g dist
+
+-- halve the number of steps
+reduce :: Num c => [c] -> [c]
+reduce path = zipWith (+) (fst $ split' path) (snd $ split' path)
+  where
+    split' :: [a] -> ([a], [a])
+    split' = \list -> case list of
+            [] -> ([], [])
+            x:xs -> let (evens, odds) = split' xs in (x:odds, evens)
 
 -- (a, b) : interval
 -- h : step length
