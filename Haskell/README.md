@@ -80,15 +80,6 @@ It also defines the following utility functions:
 
 ## Examples
 
-Calculating sample mean and variance: 
-```console
-ghci> g <- newStdGen
-ghci> sampleMean 1000 g (exponential 0.25)
-4.0092517850703695
-ghci> sampleVariance 1000 g (dFromIntegral (binomial 20 0.5))
-5.11398998998999
-```
-
 Example probabilistic program:  
 ```haskell
 import Class
@@ -135,7 +126,27 @@ ghci> plot h
 0.00 ┼────────╯                                                                                                     ╰╯╰──────
 ```
 
-Further example given by `/Examples/Linear.hs`
+```console
+ghci> plot $ sample' (mkStdGen 30) $ brownianBridge (0, 0) (1, -1) 100
+ 0.03 ┼──╮                        ╭╮
+-0.08 ┤  ╰╮    ╭╮              ╭──╯│     ╭─╮╭╮ ╭╮
+-0.20 ┤   ╰╮ ╭─╯│      ╭──╮╭╮╭╮│   ╰─╮  ╭╯ ╰╯╰─╯╰╮
+-0.31 ┤    ╰╮│  ╰╮ ╭╮╭─╯  ╰╯╰╯╰╯     │╭─╯        ╰╮
+-0.42 ┤     ╰╯   ╰─╯╰╯               ╰╯           ╰╮
+-0.54 ┤                                            ╰╮     ╭─╮        ╭╮
+-0.65 ┤                                             ╰╮╭───╯ ╰╮       │╰──╮ ╭╮
+-0.76 ┤                                              ╰╯      ╰───╮  ╭╯   ╰─╯│
+-0.87 ┤                                                          ╰╮╭╯       ╰───╮╭╮            ╭╮╭────╮╭─╮
+-0.99 ┤                                                           ╰╯            ╰╯│            │╰╯    ╰╯ ╰
+-1.10 ┤                                                                           ╰─╮         ╭╯
+-1.21 ┤                                                                             ╰╮    ╭───╯
+-1.33 ┤                                                                              │   ╭╯
+-1.44 ┤                                                                              ╰╮ ╭╯
+-1.55 ┤                                                                               ╰─╯
+
+```
+
+Further examples given by `/Examples/Linear.hs`
 
 # DList Module
 
@@ -383,9 +394,13 @@ Modified from `Data.Text.Chart`, this module provides a simple interface for plo
 
 ## Functions
 
-- `plot :: [Double] -> IO ()`: Takes a list of `Double` values and prints out a corresponding chart. Uses the default `Options`: terminal `height` 14, `minY` and `maxY` are the minimum and maximum values of the input list, "line" `style`, and color is default terminal settings.
+- `plot :: [[Double]] -> IO ()`: Takes a list of `[Double]` lists and prints out a corresponding chart. Uses the default `Options`: terminal `height` 14, `minY` and `maxY` are the minimum and maximum values of the input list, "line" `style`, and color is default terminal settings.
 
-- `plotWith :: Options -> [Double] -> IO ()`: Same as `plot`, but allows customizing the chart options. The `Options` are described below.
+- `plotWith :: Options -> [[Double]] -> IO ()`: Same as `plot`, but allows customizing the chart options. The `Options` are described below.
+
+- `getANSI :: Maybe String -> String`: Gets the associated ANSI color code. Useful for creating legends (see first example below).
+
+- `resetCode :: String`: Shortcut for ANSI reset code. 
 
 ## Options
 
@@ -395,15 +410,15 @@ The `Options` type provides a way to customize the appearance of the chart. It h
 
 - `style :: String`: Style of the plot. Can be either "line" or "points".
 
-- `color  :: Maybe String`: Color of the plot. One of,
-    - "black"
-    - "red"
-    - "green"
-    - "yellow"
-    - "blue"
-    - "magenta"
-    - "cyan"
-    - "white"
+- `colors :: [Maybe String]`: Color of the line at the associated index. If there are not enough colors provided, the list will cycle. Choose from: 
+    - Just "black"
+    - Just "red"
+    - Just "green"
+    - Just "yellow"
+    - Just "blue"
+    - Just "magenta"
+    - Just "cyan"
+    - Just "white"
 
 > **Note:** A few issues with the following: Use `Just` notation (see last example), will wrap values by default later. For now just to get an idea of scale, don't try to set min or max values within the range of your list (ie cut off some values).
 
@@ -413,24 +428,64 @@ The `Options` type provides a way to customize the appearance of the chart. It h
 
 ## Examples
 
+```haskell
+import Chart
+
+main :: IO ()
+main = do
+  let f = (10.0 *) . sin . (/ 120.0) . (pi *) . (4.0 *) <$> [0..60.0]
+      g = (10.0 *) . cos . (/ 120.0) . (pi *) . (4.0 *) <$> [0..60.0]
+      
+      key = [("f(x)", Just "red"), ("g(x)", Just "blue")]
+      legend = concat $ map (\k -> (getANSI (snd k)) ++ fst k ++ resetCode ++ ", ") key
+
+  -- legend
+  putStrLn ("Graph of functions " ++ take (length legend - 2) legend)
+  plotWith options { colors = map snd key } [f, g]
+```
 ```console
-ghci> wave = sin . (/ 120) . (pi *) . (4 *) <$> [0..60]
-ghci> plot wave
- 1.00 ┤           ╭──────╮
- 0.86 ┤        ╭──╯      ╰──╮
- 0.71 ┤      ╭─╯            ╰─╮
- 0.57 ┤     ╭╯                ╰╮
- 0.43 ┤   ╭─╯                  ╰─╮
- 0.29 ┤  ╭╯                      ╰╮
- 0.14 ┤╭─╯                        ╰─╮
- 0.00 ┼╯                            ╰╮                            ╭
--0.14 ┤                              ╰─╮                        ╭─╯
--0.29 ┤                                ╰╮                      ╭╯
--0.43 ┤                                 ╰─╮                  ╭─╯
--0.57 ┤                                   ╰╮                ╭╯
--0.71 ┤                                    ╰─╮            ╭─╯
--0.86 ┤                                      ╰──╮      ╭──╯
--1.00 ┤                                         ╰──────╯
+ghci> main
+Graph of functions f(x), g(x)
+ 10.00 ┤───╮       ╭──────╮                                     ╭───
+  8.57 ┤   ╰──╮ ╭──╯      ╰──╮                               ╭──╯
+  7.14 ┤      ╰─╮            ╰─╮                           ╭─╯
+  5.71 ┤     ╭╯ ╰─╮            ╰╮                        ╭─╯
+  4.29 ┤   ╭─╯    ╰╮            ╰─╮                     ╭╯
+  2.86 ┤  ╭╯       ╰╮             ╰╮                   ╭╯
+  1.43 ┤╭─╯         ╰─╮            ╰─╮               ╭─╯
+  0.00 ┼╯             ╰╮             ╰╮             ╭╯             ╭
+ -1.43 ┤               ╰─╮            ╰─╮         ╭─╯            ╭─╯
+ -2.86 ┤                 ╰╮             ╰╮       ╭╯             ╭╯
+ -4.29 ┤                  ╰─╮            ╰─╮    ╭╯            ╭─╯
+ -5.71 ┤                    ╰╮             ╰╮ ╭─╯            ╭╯
+ -7.14 ┤                     ╰─╮            ╭─╯            ╭─╯
+ -8.57 ┤                       ╰──╮      ╭──╯ ╰──╮      ╭──╯
+-10.00 ┤                          ╰──────╯       ╰──────╯
+```
+
+```console
+ghci> :load DRandom.hs 
+[1 of 2] Compiling Chart            ( Chart.hs, interpreted )
+[2 of 2] Compiling DRandom          ( DRandom.hs, interpreted )
+Ok, two modules loaded.
+ghci> b1 = brownianBridge (0, 1) (1, 0) 100
+ghci> b2 = brownianBridge (0, (-1)) (1, 0) 100
+ghci> plot [sample' (mkStdGen 30) b1, sample' (mkStdGen 50) b2]
+ 1.03 ┼─╮                         ╭╮
+ 0.88 ┤ ╰─╮    ╭╮              ╭──╯│     ╭─╮╭╮
+ 0.72 ┤   ╰╮ ╭─╯│  ╭╮  ╭──╮╭───╯   ╰─╮  ╭╯ ╰╯╰───╮
+ 0.57 ┤    ╰─╯  ╰╮╭╯╰──╯  ╰╯         ╰──╯        ╰─╮
+ 0.42 ┤          ╰╯                                ╰╮     ╭─╮        ╭╮
+ 0.27 ┤                                             ╰─────╯ ╰╮       │╰──╮ ╭╮        ╭╮     ╭──────╮
+ 0.12 ┤                                                      ╰────╮╭─╯   ╰─╯╰───╮╭╮ ╭╯╰╮╭───╯  ╭╮╭─╰──────
+-0.04 ┤                                                           ╰╯            ╰╭──╯  ╰╯      │╰╯  ╰╯╰╯ ╰
+-0.19 ┤                                                                       ╭╮╭╯╰─╮      ╭╮╭─╯
+-0.34 ┤              ╭╮                                        ╭─────╮   ╭╮ ╭─╯╰╯   ╰╮    ╭╯╰╯
+-0.49 ┤             ╭╯╰╮╭──╮                      ╭──╮╭──╮   ╭─╯     ╰───╯│╭╯        ╰╮ ╭─╯
+-0.65 ┤        ╭─╮╭─╯  ╰╯  ╰─╮     ╭╮             │  ╰╯  ╰───╯            ╰╯          ╰─╯
+-0.80 ┤    ╭───╯ ╰╯          ╰──╮ ╭╯╰─────────────╯
+-0.95 ┤ ╭╮ │                    ╰─╯
+-1.10 ┤─╯╰─╯
 
 ```
 

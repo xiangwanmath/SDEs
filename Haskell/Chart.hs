@@ -14,7 +14,10 @@ module Chart
     , minY
     , maxY
     , style
-    , color
+    , colors
+      -- * Helpers
+    , getANSI
+    , resetCode
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -26,7 +29,7 @@ import Control.Monad.ST        (ST, runST)
 import Control.Monad           (forM_)
 import Data.Array.ST.Safe      (STArray, getElems, writeArray, newArray)
 import Data.Char               (isSpace)
-import Data.List               (unfoldr, dropWhileEnd)
+import Data.List               (unfoldr, dropWhileEnd, intercalate)
 import Text.Printf             (printf)
 import Data.Bool               (bool)
 
@@ -35,17 +38,17 @@ data Options =
           , minY   :: Maybe Double         -- ^ Optional minimum Y value.
           , maxY   :: Maybe Double         -- ^ Optional maximum Y value.
           , style  :: String               -- ^ Style of the plot: "line" or "points".
-          , color  :: Maybe String         -- ^ Color of the plot: "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white", or 'Nothing' for default color.
+          , colors :: [Maybe String]       -- ^ Colors of the plot: ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"], or 'Nothing' for default color.
           }
 
--- | Provides default options: @Options { height = 14.0, minY = Nothing, maxY = Nothing, style = "line", color = Nothing }@.
+-- | Provides default options: @Options { height = 14.0, minY = Nothing, maxY = Nothing, style = "line", colors = [] }@.
 options :: Options
 options =
   Options { height = 14.0
           , minY = Nothing
           , maxY = Nothing
           , style = "line"
-          , color = Nothing
+          , colors = [Nothing]
           }
 
 newArray2D :: Integer -> Integer ->
@@ -55,35 +58,36 @@ newArray2D dimX dimY = newArray ((0,0), (dimX, dimY)) " "
 splitEvery :: Int -> [a] -> [[a]]
 splitEvery n = takeWhile (not . null) . unfoldr (Just . splitAt n)
 
-pad :: [Double] -> Int
+pad :: [[Double]] -> Int
 pad series =
-  let floats = series
+  let floats = concat series
       toStr :: [Double] -> [String]
       toStr = fmap (printf "%0.2f")
   in  maximum $ length <$> toStr floats
 
 ansi :: Maybe String -> String
-ansi (Just "black")   = "30"
-ansi (Just "red")     = "91"
-ansi (Just "green")   = "92"
-ansi (Just "yellow")  = "93"
-ansi (Just "blue")    = "94"
-ansi (Just "magenta") = "95"
-ansi (Just "cyan")    = "96"
-ansi (Just "white")   = "97"
-ansi (Just "reset")   = "0"
-ansi _                = "" 
+ansi color = case color of
+    Just "black"   -> "30"
+    Just "red"     -> "91"
+    Just "green"   -> "92"
+    Just "yellow"  -> "93"
+    Just "blue"    -> "94"
+    Just "magenta" -> "95"
+    Just "cyan"    -> "96"
+    Just "white"   -> "97"
+    Just "reset"   -> "0"
+    _              -> ""
+
 getANSI :: Maybe String -> String
-getANSI (Just c) = "\x1b[" ++ ansi (Just c) ++ "m"
-getANSI Nothing  = ""
+getANSI colors = "\x1b[" ++ ansi colors ++ "m"
 
 resetCode = getANSI (Just "reset")
 
-plotWith' :: Options -> [Double] -> [String]
+plotWith' :: Options -> [[Double]] -> [String]
 plotWith' opts series =
     -- variables and functions
-    let min' = minimum series
-        max' = maximum series
+    let min' = minimum (concat series)
+        max' = maximum (concat series)
         range = abs $ max' - min'
         offset = 3
         ratio = if range == 0.0 then 1.0 else height opts / range
@@ -94,8 +98,10 @@ plotWith' opts series =
                   Just y -> y * ratio
                   Nothing -> max' * ratio
         rows = round $ abs $ max2 - min2
-        width = toInteger $ length series + 3
+        width = toInteger $ length (concat series) + 3
         usePoints = style opts == "points" -- Check if style is "points"
+        useLine = style opts == "line"     -- Check if style is "line"
+        colorList = cycle (colors opts)    -- Cycle through the colors
     in runST $ do
         -- array creation
         arr <- newArray2D rows width
@@ -107,54 +113,57 @@ plotWith' opts series =
                         else max' - (y - min2) * range / fromIntegral rows
             result [round $ y - min2] [max 0 $ offset - 5] $
                 resetCode ++
-                printf ("%" ++ show (pad series) ++ ".2f") label ++ 
-                getANSI (color opts)
-            result [round $ y - min2] [offset - 1] $ 
+                printf ("%" ++ show (pad series) ++ ".2f") label
+            result [round $ y - min2] [offset - 1] $
                 resetCode ++
-                bool "┤" "┼" (y == 0) ++
-                getANSI (color opts)
+                bool "┤" "┼" (y == 0)
 
         -- initial value
-        let first = head series * ratio - min2
-        result [round $ fromInteger rows - first] [offset - 1] $ 
-            resetCode ++ "┼" ++ getANSI (color opts)
+        let first = head (head series) * ratio - min2
+        result [round $ fromInteger rows - first] [offset - 1] $
+            resetCode ++ "┼"
 
         -- plot based on style
         if usePoints
             then do -- Plot points
-                forM_ [0..length series - 1] $ \x -> do
+                forM_ [0..length (head series) - 1] $ \x -> do
                     let offset' = toInteger x + offset
-                    let y = round (series !! x * ratio) - round min2
-                    result [rows - y] [offset'] "*"
+                    forM_ (zip [0..] series) $ \(i, s) -> do
+                        let y = round (s !! x * ratio) - round min2
+                        result [rows - y] [offset'] $ getANSI (colorList !! i) ++ "*"
             else do -- Plot line
-                forM_ [0..length series - 2] $ \x -> do
+                forM_ [0..length (head series) - 2] $ \x -> do
                     let offset' = toInteger x + offset
-                    let y' i = round (series !! i * ratio) - round min2
-                    let (y0, y1) = (y' x, y' (x + 1))
-                    if y0 == y1 then
-                        result [rows - y0] [offset'] "─"
-                    else do
-                        result [rows - y1] [offset'] $
-                            getANSI (color opts) ++
-                            bool "╭" "╰" (y0 > y1)
-                        result [rows - y0] [offset'] $
-                            getANSI (color opts) ++
-                            bool "╯" "╮" (y0 > y1)
-
-                        forM_ [min y0 y1 + 1..max y0 y1 - 1] $ \y ->
-                            result [rows - y] [offset'] "│"
+                    forM_ (zip [0..] series) $ \(i, s) -> do 
+                        let y' j = round (s !! j * ratio) - round min2
+                        let (y0, y1) = (y' x, y' (x + 1))
+                        if y0 == y1 then
+                            result [rows - y0] [offset'] $
+                            getANSI (colorList !! i) ++ "─"
+                        else do
+                            result [rows - y1] [offset'] $
+                                getANSI (colorList !! i) ++
+                                bool "╭" "╰" (y0 > y1)
+                            result [rows - y0] [offset'] $
+                                getANSI (colorList !! i) ++
+                                bool "╯" "╮" (y0 > y1)
+                            forM_ [min y0 y1 + 1..max y0 y1 - 1] $ \y ->
+                                result [rows - y] [offset'] $ 
+                                getANSI (colorList !! i) ++ "│"
 
         elems <- getElems arr
         return $ elems ++ [resetCode] ++ ["\x1b[A"]
 
--- | Takes a list of Doubles and prints out a corresponding chart
---   with a default terminal height of 14 blocks.
-plot :: [Double] -> IO ()
-plot x = if length x < 1 then return () else plotWith options x
-
--- | Same as plot but it's possible to define custom options.
---   Example: @'plotWith' options { 'height' = 20.0, 'minY' = Just 0.0, 'maxY' = Just 100.0, 'color' = Just "red" }@
-plotWith :: Options -> [Double] -> IO ()
+-- | Takes a list of lists of Doubles and renders them as a chart.
+-- Each inner list represents a separate series, and each Double is a data point in that series.
+-- Returns a list of strings, where each string represents a row of the chart.
+plotWith :: Options -> [[Double]] -> IO ()
 plotWith options' series = forM_ result $
       putStrLn . dropWhileEnd isSpace . concat
-    where result = splitEvery (length series + 4) $ plotWith' options' series
+    where result = splitEvery (length (concat series) + 4) $ plotWith' options' series
+
+-- | Takes a list of lists of Doubles and renders them as a chart with default options.
+-- Each inner list represents a separate series, and each Double is a data point in that series.
+-- Returns a list of strings, where each string represents a row of the chart.
+plot :: [[Double]] -> IO ()
+plot = plotWith options
