@@ -34,21 +34,29 @@ import Text.Printf             (printf)
 import Data.Bool               (bool)
 
 data Options =
-  Options { height :: Double               -- ^ Allows setting the height of the chart.
-          , minY   :: Maybe Double         -- ^ Optional minimum Y value.
-          , maxY   :: Maybe Double         -- ^ Optional maximum Y value.
+  Options { height :: Double               -- ^ Height of the chart.
+          , minY   :: Maybe Double         -- ^ Minimum Y value.
+          , maxY   :: Maybe Double         -- ^ Maximum Y value.
           , style  :: String               -- ^ Style of the plot: "line" or "points".
-          , colors :: [Maybe String]       -- ^ Colors of the plot: ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"], or 'Nothing' for default color.
+          , colors :: [Maybe String]       -- ^ Colors of the plot: Just "black",
+                                           --                       Just "red", 
+                                           --                       Just "green", 
+                                           --                       Just "yellow",
+                                           --                       Just "blue",
+                                           --                       Just "magenta",
+                                           --                       Just "cyan",
+                                           --                       Just "white", 
+                                           --                       'Nothing' for default terminal settings.
           }
 
--- | Provides default options: @Options { height = 14.0, minY = Nothing, maxY = Nothing, style = "line", colors = [] }@.
+-- | Provides default options
 options :: Options
 options =
   Options { height = 14.0
           , minY = Nothing
           , maxY = Nothing
           , style = "line"
-          , colors = [Nothing]
+          , colors = [Nothing, Just "blue", Just "red", Just "green", Just "magenta", Just "yellow", Just "cyan"]
           }
 
 newArray2D :: Integer -> Integer ->
@@ -156,14 +164,11 @@ plotWith' opts series =
 
 -- | Takes a list of lists of Doubles and renders them as a chart.
 -- Each inner list represents a separate series, and each Double is a data point in that series.
--- Returns a list of strings, where each string represents a row of the chart.
 plotWith :: Options -> [[Double]] -> IO ()
 plotWith options' series = forM_ result $
       putStrLn . dropWhileEnd isSpace . concat
     where result = splitEvery (length (concat series) + 4) $ plotWith' options' series
 
--- | Takes a list of lists of Doubles and renders them as a chart with default options.
--- Each inner list represents a separate series, and each Double is a data point in that series.
--- Returns a list of strings, where each string represents a row of the chart.
+-- | plotWith using default options.
 plot :: [[Double]] -> IO ()
 plot = plotWith options
