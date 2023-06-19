@@ -108,7 +108,7 @@ Example plot:
 ghci> g <- newStdGen
 ghci> samples = take 10000 (sample g (normal 0 1))
 ghci> h = histogram (-3, 3) 0.05 samples
-ghci> plot h
+ghci> plot [h]
 1.95 ┼                                                       ╭╮
 1.81 ┤                                                       │╰╮   ╭╮
 1.67 ┤                                                    ╭─╮│ ╰──╮│╰╮   ╭╮
@@ -127,7 +127,7 @@ ghci> plot h
 ```
 
 ```console
-ghci> plot $ sample' (mkStdGen 30) $ brownianBridge (0, 0) (1, -1) 100
+ghci> plot $ [sample' (mkStdGen 30) $ brownianBridge (0, 0) (1, -1) 100]
  0.03 ┼──╮                        ╭╮
 -0.08 ┤  ╰╮    ╭╮              ╭──╯│     ╭─╮╭╮ ╭╮
 -0.20 ┤   ╰╮ ╭─╯│      ╭──╮╭╮╭╮│   ╰─╮  ╭╯ ╰╯╰─╯╰╮
@@ -219,7 +219,7 @@ probability of reaching False: 0.5
 
 Example plot:
 ```console
-ghci> plot (map snd $ toList' $ gamma 5 1)
+ghci> plot [map snd $ toList' $ gamma 5 1]
 0.20 ┼   ╭╮
 0.18 ┤   │╰╮
 0.17 ┤  ╭╯ │
@@ -341,7 +341,7 @@ ghci> evalRand (oneDC 10) (mkStdGen 42)
 -- Plot a one-dimensional simple random walk of length 100
 ghci> g <- newStdGen
 ghci> path = map fromIntegral $ evalRand (oneD 100) g
-ghci> plot path
+ghci> plot [path]
  9.00 ┤                                         ╭╮                                  ╭╮
  8.29 ┤                                         ││                                  ││
  7.57 ┤                                        ╭╯╰╮    ╭╮                          ╭╯╰╮
@@ -394,11 +394,13 @@ Modified from `Data.Text.Chart`, this module provides a simple interface for plo
 
 ## Functions
 
-- `plot :: [[Double]] -> IO ()`: Takes a list of `[Double]` lists and prints out a corresponding chart. Uses the default `Options`: terminal `height` 14, `minY` and `maxY` are the minimum and maximum values of the input list, "line" `style`, and color is default terminal settings.
+- `plot :: [[Double]] -> IO ()`: Takes a list of `[Double]` lists and prints out a corresponding chart. Uses the default `Options`: terminal `height` 14, `minY` and `maxY` are the minimum and maximum values of the input list, "line" `style`. Color cycle is `Nothing`, blue, red, green, magenta, yellow, cyan.
 
 - `plotWith :: Options -> [[Double]] -> IO ()`: Same as `plot`, but allows customizing the chart options. The `Options` are described below.
 
-- `getANSI :: Maybe String -> String`: Gets the associated ANSI color code. Useful for creating legends (see first example below).
+- `makeLegend :: [([Char], Maybe String)] -> [Char]`: Given a list of strings with associated color keys, returns a textbox legend displaying the strings in the proper colors. See first example. 
+
+- `getANSI :: Maybe String -> String`: Gets the associated ANSI color code.
 
 - `resetCode :: String`: Shortcut for ANSI reset code. 
 
@@ -411,14 +413,15 @@ The `Options` type provides a way to customize the appearance of the chart. It h
 - `style :: String`: Style of the plot. Can be either "line" or "points".
 
 - `colors :: [Maybe String]`: Color of the line at the associated index. If there are not enough colors provided, the list will cycle. Choose from: 
-    - Just "black"
-    - Just "red"
-    - Just "green"
-    - Just "yellow"
-    - Just "blue"
-    - Just "magenta"
-    - Just "cyan"
-    - Just "white"
+    - `Nothing` (default terminal settings)
+    - `Just "black"`
+    - `Just "red"`
+    - `Just "green"`
+    - `Just "yellow"`
+    - `Just "blue"`
+    - `Just "magenta"`
+    - `Just "cyan"`
+    - `Just "white"`
 
 > **Note:** A few issues with the following: Use `Just` notation (see last example), will wrap values by default later. For now just to get an idea of scale, don't try to set min or max values within the range of your list (ie cut off some values).
 
@@ -429,23 +432,22 @@ The `Options` type provides a way to customize the appearance of the chart. It h
 ## Examples
 
 ```haskell
-import Chart
-
 main :: IO ()
 main = do
   let f = (10.0 *) . sin . (/ 120.0) . (pi *) . (4.0 *) <$> [0..60.0]
       g = (10.0 *) . cos . (/ 120.0) . (pi *) . (4.0 *) <$> [0..60.0]
-      
       key = [("f(x)", Just "red"), ("g(x)", Just "blue")]
-      legend = concat $ map (\k -> (getANSI (snd k)) ++ fst k ++ resetCode ++ ", ") key
 
-  -- legend
-  putStrLn ("Graph of functions " ++ take (length legend - 2) legend)
+  putStrLn $ makeLegend key
   plotWith options { colors = map snd key } [f, g]
 ```
 ```console
 ghci> main
-Graph of functions f(x), g(x)
+            +------+
+            | f(x) |
+            | g(x) |
+            +------+
+       
  10.00 ┤───╮       ╭──────╮                                     ╭───
   8.57 ┤   ╰──╮ ╭──╯      ╰──╮                               ╭──╯
   7.14 ┤      ╰─╮            ╰─╮                           ╭─╯
@@ -461,6 +463,7 @@ Graph of functions f(x), g(x)
  -7.14 ┤                     ╰─╮            ╭─╯            ╭─╯
  -8.57 ┤                       ╰──╮      ╭──╯ ╰──╮      ╭──╯
 -10.00 ┤                          ╰──────╯       ╰──────╯
+
 ```
 
 ```console
@@ -496,7 +499,7 @@ ghci> :load randomWalk.hs
 Ok, two modules loaded.
 ghci> g <- newStdGen
 ghci> path = map fromIntegral $ evalRand (oneD 100) g
-ghci> plotWith options {style = "points"} path
+ghci> plotWith options {style = "points"} [path]
  9.00 ┤                                                                                        *
  8.00 ┤                                                                                       * *
  7.00 ┤                                                                                      *   *
@@ -528,7 +531,7 @@ main = do
         normal (if x then (-3) else 3) 1
       samples = take 1000 $ sample g dist 
       hist = histogram (-7, 7) 0.2 samples
-  plotWith options { maxY = Just 1 } hist
+  plotWith options { maxY = Just 1 } [hist]
 ```
 ```console
 ghci> main

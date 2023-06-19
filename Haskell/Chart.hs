@@ -18,6 +18,7 @@ module Chart
       -- * Helpers
     , getANSI
     , resetCode
+    , makeLegend
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -90,6 +91,14 @@ getANSI :: Maybe String -> String
 getANSI colors = "\x1b[" ++ ansi colors ++ "m"
 
 resetCode = getANSI (Just "reset")
+
+makeLegend :: [([Char], Maybe String)] -> [Char]
+makeLegend key = 
+  let strs = map fst key
+      horizontalLine = "\x1b[12C+" ++ replicate (maximum (map length strs) + 2) '-' ++ "+"
+      colorStrs = map (\k -> (getANSI (snd k)) ++ fst k ++ resetCode) key
+      paddedStrings = map (\s -> "\x1b[12C| " ++ s ++ replicate (maximum (map length colorStrs) - length s + 1) ' ' ++ "|") colorStrs
+  in unlines ( horizontalLine : paddedStrings ++ [horizontalLine])
 
 plotWith' :: Options -> [[Double]] -> [String]
 plotWith' opts series =
