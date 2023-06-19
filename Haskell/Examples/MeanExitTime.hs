@@ -5,8 +5,14 @@ import Chart
 
 import System.Random hiding (uniform, sample, random, next)
 
--- Plot solution to dX(t) = μ * X(t)dt + σ * X(t)dW(t)
--- X(t) = X(0) * e^[(μ - 1/2 * σ^2)t + σ * W(t)]
+-- Given SDE dX(t) = μ * X(t)dt + σ * X(t)dW(t) and initial value X(0) = X_0 ϵ (a,b),
+--   define T_{exit} as the first time that solution leaves the open interval (a,b)
+
+-- Assuming X_0 = x, consider E[T_{exit}(x)] = u(x), then u(x) satisfies the BVP:
+--   (1/2)g²(x) * d²u/dx² + f(x) * du/dx = -1 for x ϵ (a,b), u(a) = u(b) = 0.
+
+-- Plot solution to BVP for dX(t) = μ * X(t)dt + σ * X(t)dW(t).
+-- Plot numerical simulation of mean exit time.
 
 xt :: Double -> Double -> Double -> Double -> Int -> DRandom [Double]
 -- x0 : X(0)
@@ -47,9 +53,9 @@ simulatedMeanExitTime x0 t mu sigma h a b sampleSize =
 main :: IO ()
 main = do
   let a = 1.0; b = 2.0; mu = 1.0; sigma = 0.6
-      xs = [1, 1.005 .. 2]; h = 500
+      xs = [1, 1.005 .. 2]; h = 200
       analytical = map (\x -> meanExitTime x a b mu sigma) xs
-      numerical = map (\x0 -> simulatedMeanExitTime x0 1.0 mu sigma h a b 50) xs
+      numerical = map (\x0 -> simulatedMeanExitTime x0 1.0 mu sigma h a b 100) xs
 
       key = [("analytical", Just "blue"), ("numerical", Just "yellow")]
       legend = makeLegend key
