@@ -4,10 +4,8 @@
 -- Modified from Data.Text.Chart
 
 module Chart
-    ( -- * Plot
-      plot
+    ( plot
     , plotWith
-      -- * Options
     , Options
     , options
     , height
@@ -15,10 +13,15 @@ module Chart
     , maxY
     , style
     , colors
-      -- * Helpers
     , getANSI
     , resetCode
     , makeLegend
+    , contour
+    , contourWith
+    , contourF
+    , contourFWith
+    , colorPalette
+    , monochromePalette
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -30,7 +33,7 @@ import Control.Monad.ST        (ST, runST)
 import Control.Monad           (forM_)
 import Data.Array.ST.Safe      (STArray, getElems, writeArray, newArray)
 import Data.Char               (isSpace)
-import Data.List               (unfoldr, dropWhileEnd, intercalate)
+import Data.List               (unfoldr, dropWhileEnd, intercalate, transpose)
 import Text.Printf             (printf)
 import Data.Bool               (bool)
 
@@ -49,6 +52,70 @@ data Options =
                                            --                       Just "white", 
                                            --                       'Nothing' for default terminal settings.
           }
+
+colorPalette :: [String]
+colorPalette =
+    [ "\ESC[0m \ESC[0m", "\ESC[0m \ESC[0m", "\ESC[0m \ESC[0m", "\ESC[0m \ESC[0m"
+    , "\ESC[94m.\ESC[0m", "\ESC[94m.\ESC[0m", "\ESC[94m.\ESC[0m", "\ESC[94m.\ESC[0m"
+    , "\ESC[94m-\ESC[0m", "\ESC[94m-\ESC[0m", "\ESC[94m-\ESC[0m"
+    , "\ESC[96m,\ESC[0m", "\ESC[96m,\ESC[0m", "\ESC[96m,\ESC[0m"
+    , "\ESC[96m'\ESC[0m", "\ESC[96m'\ESC[0m", "\ESC[96m'\ESC[0m"
+    , "\ESC[96m-\ESC[0m", "\ESC[96m-\ESC[0m"
+    , "\ESC[92m:\ESC[0m"
+    , "\ESC[92m=\ESC[0m"
+    , "\ESC[92m;\ESC[0m"
+    , "\ESC[93mo\ESC[0m"
+    , "\ESC[93m!\ESC[0m"
+    , "\ESC[93m?\ESC[0m"
+    , "\ESC[91mX\ESC[0m"
+    , "\ESC[91m0\ESC[0m"
+    , "\ESC[91m8\ESC[0m"
+    , "\ESC[95m#\ESC[0m"
+    , "\ESC[95m%\ESC[0m"
+    , "\ESC[95m&\ESC[0m"
+    , "\ESC[97m$\ESC[0m"
+    , "\ESC[97m@\ESC[0m"
+    ]
+
+monochromePalette :: [String]
+monochromePalette = map (:[]) "       ....---,,,'''--:=;o!?X08#%&$@"
+
+-- | plots a contour given a grid of z-values, and a palette gradient of low to high values
+contourWith :: [String] -> [[Double]] -> IO ()
+contourWith palette g = putStr $ to_ascii palette g
+
+-- | contourWith default palette
+contour :: [[Double]] -> IO ()
+contour g = contourWith colorPalette g
+
+-- | plots a contour of a given function z(x, y)
+--   with the x range (xt, xb), y range (yt, yb)
+--   and with step size w in the x, h in the y direction
+contourFWith :: [String] -> (Int, Int) -> (Double, Double) -> (Double, Double) -> (Double -> Double -> Double) -> IO ()
+contourFWith palette (w,h) (xt,xb) (yt,yb) z = putStr $ to_ascii palette $ grid (w,h) (xt,xb) (yt,yb) z
+
+-- | contourFWith default palette
+contourF :: (Int, Int) -> (Double, Double) -> (Double, Double) -> (Double -> Double -> Double) -> IO ()
+contourF (w,h) (xt,xb) (yt,yb) z = contourFWith colorPalette (w,h) (xt,xb) (yt,yb) z
+
+grid :: (Int,Int) -> (Double,Double) -> (Double,Double) -> (Double -> Double -> Double) -> [[Double]]
+grid (w,h) (xt,xb) (yt,yb) z =
+    [ [ z x y | x <- [xt, xt+stepx .. xb] ] | y <- [yt, yt+stepy .. yb] ]
+    where stepx = (xb - xt) / (fromIntegral w)
+          stepy = (yb - yt) / (fromIntegral h)
+
+to_ascii :: [String] -> [[Double]] -> String
+to_ascii palette grid = unlines $ reverse $ map (\row -> concatMap (\val -> valToChar val palette) row) grid
+    where 
+        valToChar :: Double -> [String] -> String
+        valToChar val palette =
+            let numChars = length palette
+                minG = minimum (concat grid)  -- Minimum value in the entire grid
+                maxG = maximum (concat grid)  -- Maximum value in the entire grid
+                range = maxG - minG
+                index = truncate ((val - minG) / range * fromIntegral (numChars - 1))
+            in palette !! index
+
 
 -- | Provides default options
 options :: Options
