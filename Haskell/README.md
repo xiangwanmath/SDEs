@@ -146,7 +146,7 @@ ghci> plot $ [sample' (mkStdGen 30) $ brownianBridge (0, 0) (1, -1) 100]
 
 ```
 
-Further examples given by `/Examples/Linear.hs`
+Further examples given in `/Examples/Linear.hs`, `/Examples/MeanExitTime.hs`
 
 # DList Module
 
@@ -404,6 +404,18 @@ Modified from `Data.Text.Chart`, this module provides a simple interface for plo
 
 - `resetCode :: String`: Shortcut for ANSI reset code. 
 
+- `contour :: [[Double]] -> IO ()`: Takes a grid `[[Double]]` of z-values, and plots a contour map.
+
+- `contourWith :: [String] -> [[Double]] -> IO ()`: Same as `contour`, but allows custom palettes.
+
+- `contourF :: (Int, Int) -> (Double, Double) -> (Double, Double) -> (Double -> Double -> Double) -> IO ()`: Plots a contour map, given the number of steps on the x and y axes `(Int, Int)`, the range of x values `(Double, Double)`, the range of y values `(Double, Double)`, and a function in terms of z `(Double -> Double -> Double)`.
+
+- `contourFWith :: [String] -> (Int, Int) -> (Double, Double) -> (Double, Double) -> (Double -> Double -> Double) -> IO ()`: Same as `contourF`, but allows custom palettes.
+
+- `colorPalette :: [String]`: the default color gradient for contour maps.
+
+- `monochromePalette :: [String]`: a monochrome gradient for contour maps. 
+
 ## Options
 
 The `Options` type provides a way to customize the appearance of the chart. It has the following fields:
@@ -554,6 +566,35 @@ ghci> main
 0.19 ┤        │                     │              │       │
 0.14 ┤     ╭──╯                     ╰───╮         ╭╯       │
 0.00 ┼─────╯                            ╰─────────╯        ╰───────────────
+```
+```console
+ghci> contourF (50, 25) (-3, 3) (-3, 5) (\x y -> (x^2 + (y - ((** (1/3)) (x^2)))^2) - 1)
+''''''''''''''''''''---:=o=:---''''''''''''''''''''
+'',,,,,,,,,,,,,,,,,'''''-=-''''',,,,,,,,,,,,,,,,,''
+,,,,,,,---------,,,,,,,''-'',,,,,,,---------,,,,,,,
+,,--------------------,,,',,,--------------------,,
+--------..........------,,,------..........--------
+-----..................-----..................-----
+---......................-......................---
+--...........       ...........       ...........--
+-.........              ...              .........-
+-........                .                ........-
+-.......                                   .......-
+-.......                                   .......-
+--......                                   ......--
+---......                                 ......---
+----......                               ......----
+,----......                             ......----,
+,,,---.......                         .......---,,,
+',,,----.......                     .......----,,,'
+'',,,,----.......                 .......----,,,,''
+-''',,,,----.......             .......----,,,,'''-
+:--''',,,,----.......         .......----,,,,'''--:
+;=:--'''',,,-----.......   .......-----,,,''''--:=;
+!o;=:--'''',,,,----...... ......----,,,,''''--:=;o!
+0X?!o;=:--'''',,,,----.......----,,,,''''--:=;o!?X0
+%80X?!o;=:---''',,,,----...----,,,,'''---:=;o!?X08%
+$&%#80X?!o;=:--'''',,,,-----,,,,''''--:=;o!?X08#%&@
 ```
 
 # Benchmarks.hs
