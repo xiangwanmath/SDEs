@@ -63,6 +63,33 @@ The `DRandom` instance defines all the probability distributions in `Distributio
 - `multivariateNormal :: [Double] -> Matrix Double -> DRandom [Double]`: Draws a vector of random numbers from a normal distribution with the given mean vector and covariance matrix. 
 - `wiener :: Double -> Int -> DRandom [Double]`: Draws an approximate random path from a wiener process with a given end time and number of steps. 
 - `brownianBridge :: (Double, Double) -> (Double, Double) -> Int -> DRandom [Double]`: Draws an approximate random path from a brownian bridge from an inital point `(0, x1)` to an endpoint `(t, yt)` with the given number of steps. 
+- `poissonProcess :: Double -> Double -> Int -> DRandom [Int]`: Draws an approximate random path from a poisson proccess with a given λ value, end time, and number of steps.
+
+It also provides the following numerical methods:
+
+- `solveBy :: (b1 -> p1 -> p2 -> b2 -> (a, a) -> (b2, b1))
+     -> p1 -> p2 -> [a] -> b2 -> b1 -> [b2]`: Approximates the solution of a general SDE of the form dX(t) = f[X(t)] dt + g[X(t)] dW(t), given one of the methods below, the functions f and g as in the above, a mesh of sample points, an inital condition, and a random number generator. 
+- `eulerMaruyama :: StdGen
+     -> (Double -> Double)
+     -> (Double -> Double)
+     -> Double
+     -> (Double, Double)
+     -> (Double, StdGen)`: Euler-Maruyama method; for use with `solveBy`.
+- `milstein :: StdGen
+     -> (Double -> Double)
+     -> (Double -> Double)
+     -> Double
+     -> (Double, Double)
+     -> (Double, StdGen)`: Milstein Method; for use with `solveBy`
+- `solveBy'
+  :: (StdGen -> p1 -> p2 -> t -> (a, a) -> t)
+     -> p1 -> p2 -> [a] -> t -> Int -> [t]`: Same as `solveBy`, but uses a seed rather than a random number generator.
+- `eulerMaruyama' :: StdGen
+     -> (Double -> Double)
+     -> (Double -> Double)
+     -> Double
+     -> (Double, Double)
+     -> Double`: For use with `solveBy'`.
 
 It also defines the following utility functions:
 
@@ -76,6 +103,8 @@ It also defines the following utility functions:
 - `sampleMeanVector :: [[Double]] -> [Double]`: Calculates the sample mean vector of a given multivariate distribution.
 - `averagePath :: Fractional a => [[a]] -> [a]`: Calculates the average list from a list of lists.
 - `reduce :: Num c => [c] -> [c]`: Reduces the number of steps in a path by half. Useful for comparing coarser approximations of the same sample path. 
+- `average :: (Fractional a, Foldable t) => t a -> a`: Calculates the average of a list.
+- `nGens :: RandomGen g => Int -> g -> [StdGen]`: Creates a list of n StdGen random number generators.
 
 
 ## Examples
